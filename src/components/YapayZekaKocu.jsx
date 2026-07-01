@@ -14,7 +14,7 @@ async function geminiAnalyze(prompt) {
       'X-Title': 'KPSS Asistanim',
     },
     body: JSON.stringify({
-      model: 'meta-llama/llama-3.1-8b-instruct:free',
+      model: 'google/gemma-4-31b-it:free',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 1200,
       temperature: 0.7,
