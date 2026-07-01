@@ -138,13 +138,16 @@ export default function Takvim({ user }) {
             const toplam = gunHedefleri.length
             const bugunMu = item.tarih === bugun.toISOString().split('T')[0]
             const seciliMi = item.tarih === seciliGun
+            const sinavGunuMu = item.tarih === '2026-09-06'
 
             return (
               <button
                 key={item.tarih}
                 onClick={() => setSeciliGun(item.tarih)}
                 className={`relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-medium transition-all duration-200 ${
-                  seciliMi
+                  sinavGunuMu
+                    ? seciliMi ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600 ring-2 ring-red-400'
+                    : seciliMi
                     ? 'bg-sage-500 text-white'
                     : bugunMu
                     ? 'bg-sage-100 text-sage-700 ring-1 ring-sage-300'
@@ -152,6 +155,11 @@ export default function Takvim({ user }) {
                 }`}
               >
                 {item.gun}
+                {sinavGunuMu && (
+                  <span className={`text-[8px] font-bold leading-tight ${seciliMi ? 'text-white' : 'text-red-500'}`}>
+                    SINAV
+                  </span>
+                )}
                 {toplam > 0 && (
                   <div className="flex gap-0.5 mt-0.5">
                     {Array.from({ length: Math.min(toplam, 3) }).map((_, i) => (

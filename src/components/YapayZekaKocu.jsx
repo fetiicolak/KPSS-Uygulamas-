@@ -11,7 +11,7 @@ async function geminiAnalyze(prompt) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'HTTP-Referer': 'https://fetiicolak.github.io/KPSS-Uygulamas-/',
-      'X-Title': 'KPSS Asistanım',
+      'X-Title': 'KPSS Asistanim',
     },
     body: JSON.stringify({
       model: 'google/gemini-2.0-flash-exp:free',
