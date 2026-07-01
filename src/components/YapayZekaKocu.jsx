@@ -2,19 +2,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { Sparkles, RefreshCw, Calendar, TrendingUp, Brain, ChevronDown, ChevronUp } from 'lucide-react'
 
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || ''
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || ''
 
 async function geminiAnalyze(prompt) {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'HTTP-Referer': 'https://fetiicolak.github.io/KPSS-Uygulamas-/',
-      'X-Title': 'KPSS Asistanim',
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
+      model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 1200,
       temperature: 0.7,
@@ -90,8 +88,8 @@ export default function YapayZekaKocu({ user }) {
   }, [fetchRaporlar, fetchIstatistik])
 
   async function raporOlustur() {
-    if (!OPENROUTER_API_KEY) {
-      setHata('VITE_OPENROUTER_API_KEY ortam değişkeni ayarlanmamış. .env dosyasına ekle.')
+    if (!GROQ_API_KEY) {
+      setHata('VITE_GROQ_API_KEY ortam değişkeni ayarlanmamış. .env dosyasına ekle.')
       return
     }
     if (!istatistik) return
@@ -134,7 +132,7 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
   }
 
   async function chatGonder() {
-    if (!chatMesaj.trim() || !OPENROUTER_API_KEY) return
+    if (!chatMesaj.trim() || !GROQ_API_KEY) return
     setChatLoading(true)
     const kullanicimesaj = chatMesaj.trim()
     setChatMesaj('')
@@ -169,12 +167,12 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
       </div>
 
       {/* API Key Uyarısı */}
-      {!OPENROUTER_API_KEY && (
+      {!GROQ_API_KEY && (
         <div className="card bg-amber-50 border border-amber-100">
           <p className="text-xs text-amber-700">
             <strong>Yapay Zeka servisi yapılandırılmamış!</strong><br />
             Proje kök klasöründe <code className="bg-amber-100 px-1 rounded">.env</code> dosyası oluştur:<br />
-            <code className="bg-amber-100 px-1 rounded text-[10px]">VITE_OPENROUTER_API_KEY=YOUR_KEY_HERE</code>
+            <code className="bg-amber-100 px-1 rounded text-[10px]">VITE_GROQ_API_KEY=YOUR_KEY_HERE</code>
           </p>
         </div>
       )}
@@ -208,7 +206,7 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
       {/* Rapor Oluştur */}
       <button
         onClick={raporOlustur}
-        disabled={loading || !OPENROUTER_API_KEY}
+        disabled={loading || !GROQ_API_KEY}
         className="w-full py-3 bg-gradient-to-r from-lavender-300 to-lavender-400 text-white rounded-2xl font-medium text-sm flex items-center justify-center gap-2 shadow-card active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
@@ -301,11 +299,11 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
                 value={chatMesaj}
                 onChange={e => setChatMesaj(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && chatGonder()}
-                disabled={!OPENROUTER_API_KEY || chatLoading}
+                disabled={!GROQ_API_KEY || chatLoading}
               />
               <button
                 onClick={chatGonder}
-                disabled={!chatMesaj.trim() || !OPENROUTER_API_KEY || chatLoading}
+                disabled={!chatMesaj.trim() || !GROQ_API_KEY || chatLoading}
                 className="btn-primary px-3 py-2"
               >
                 <Sparkles className="w-4 h-4" />
