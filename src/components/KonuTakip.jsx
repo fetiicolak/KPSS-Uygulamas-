@@ -23,18 +23,21 @@ const DERSLER = [
 async function geminiOner(prompt) {
   if (!GEMINI_API_KEY) return null
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.6, maxOutputTokens: 400 },
+        generationConfig: { temperature: 0.6, maxOutputTokens: 800, thinkingConfig: { thinkingBudget: 0 } },
       }),
     }
   )
   const data = await res.json()
-  if (data.error) return null
+  if (data.error) {
+    console.error('Gemini API hatası:', data.error)
+    return null
+  }
   return data.candidates?.[0]?.content?.parts?.[0]?.text || null
 }
 
@@ -65,6 +68,20 @@ export default function KonuTakip({ user }) {
   const [aiOnerileri, setAiOnerileri] = useState({}) // { 'Ders-Konu': 'metin' }
   const [aiYukleniyor, setAiYukleniyor] = useState({})
   const [loading, setLoading] = useState(false)
+  // Test girilmemiş konular: DB'de kayıt olmadığı için localStorage'da bekletilir,
+  // ilk test kaydıyla birlikte DB'den gelmeye başlar ve listeden düşer
+  const [bekleyenKonular, setBekleyenKonular] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`konu_bekleyen_${user.id}`) || '[]') } catch { return [] }
+  })
+
+  useEffect(() => {
+    localStorage.setItem(`konu_bekleyen_${user.id}`, JSON.stringify(bekleyenKonular))
+  }, [bekleyenKonular, user.id])
+
+  useEffect(() => {
+    if (!kayitlar.length) return
+    setBekleyenKonular(prev => prev.filter(b => !kayitlar.some(k => k.ders === b.ders && k.konu === b.konu)))
+  }, [kayitlar])
 
   const fetchKayitlar = useCallback(async () => {
     const { data } = await supabase
@@ -175,14 +192,23 @@ Türkçe, kısa ve net yaz. Emoji kullanabilirsin.`
   }
 
   async function yeniKonuEkle(dersId) {
-    if (!yeniKonu.trim()) return
-    // Dummy kayıt yok, sadece konuyu kayıtlara eklemek için boş kayıt YOK
-    // Bunun yerine ders altında konu grubunu track ediyoruz
-    // Yeni konuyu "pending" state'de tutuyoruz, ilk test girişinde kaydolacak
-    setEklemeAcik({ ders: dersId, konu: yeniKonu.trim() })
+    const konu = yeniKonu.trim()
+    if (!konu) return
+    // Konu ilk test girişine kadar bekleyen listesinde tutulur (localStorage),
+    // böylece test girilmeden art arda konu eklenebilir
+    setBekleyenKonular(prev =>
+      prev.some(b => b.ders === dersId && b.konu === konu) ? prev : [...prev, { ders: dersId, konu }]
+    )
+    setEklemeAcik({ ders: dersId, konu })
     setYeniKonu('')
     setKonuEklemeAcik(false)
     setYeniKonuDers(null)
+  }
+
+  function bekleyenKonuSil(dersId, konu) {
+    setBekleyenKonular(prev => prev.filter(b => !(b.ders === dersId && b.konu === konu)))
+    if (eklemeAcik?.ders === dersId && eklemeAcik?.konu === konu) setEklemeAcik(null)
+    if (acikKonu === `${dersId}-${konu}`) setAcikKonu(null)
   }
 
   // Grafik verisi
@@ -235,11 +261,11 @@ Türkçe, kısa ve net yaz. Emoji kullanabilirsin.`
       {/* Ders Listesi */}
       {DERSLER.map(ders => {
         const konular = dersKonulari(ders.id)
-        // Eğer eklemeAcik.ders bu ders ise ve konu yoksa onu da göster
-        const bekleyenKonu = eklemeAcik?.ders === ders.id ? eklemeAcik.konu : null
-        const tumKonular = bekleyenKonu && !konular.includes(bekleyenKonu)
-          ? [...konular, bekleyenKonu]
-          : konular
+        // Test girilmemiş (bekleyen) konuları da listeye ekle
+        const bekleyenler = bekleyenKonular
+          .filter(b => b.ders === ders.id && !konular.includes(b.konu))
+          .map(b => b.konu)
+        const tumKonular = [...konular, ...bekleyenler]
         const oz = dersOzet(ders.id)
         const dersAcik = acikDers === ders.id
 
@@ -313,7 +339,16 @@ Türkçe, kısa ve net yaz. Emoji kullanabilirsin.`
                           </div>
                         )}
                         {!oz2 && (
-                          <span className="text-[10px] text-gray-300">Test girilmemiş</span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-300">Test girilmemiş</span>
+                            <span
+                              role="button"
+                              onClick={e => { e.stopPropagation(); bekleyenKonuSil(ders.id, konu) }}
+                              className="p-0.5 text-gray-200 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </span>
+                          </span>
                         )}
                       </button>
 

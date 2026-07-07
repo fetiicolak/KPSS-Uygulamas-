@@ -4,7 +4,7 @@ import { Sparkles, RefreshCw, Calendar, TrendingUp, Brain, ChevronDown, ChevronU
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || ''
 
-async function geminiAnalyze(prompt) {
+async function groqAnalyze(prompt) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -115,7 +115,7 @@ export default function YapayZekaKocu({ user }) {
 Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motive et.`
 
     try {
-      const rapor = await geminiAnalyze(prompt)
+      const rapor = await groqAnalyze(prompt)
 
       await supabase.from('ai_raporlar').insert({
         user_id: user.id,
@@ -141,7 +141,7 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
     const baglamPrompt = `Sen bir KPSS hazırlık koçusun. ${istatistik ? `Kullanıcının bu haftaki takvim tamamlama oranı: %${istatistik.takvimOrani}, hata havuzunda ${istatistik.hatalarSayisi} çözülmemiş soru var.` : ''} Türkçe, kısa ve yardımcı cevap ver. Soru: "${kullanicimesaj}"`
 
     try {
-      const cevap = await geminiAnalyze(baglamPrompt)
+      const cevap = await groqAnalyze(baglamPrompt)
       setChatGecmisi(prev => [...prev, { rol: 'ai', metin: cevap }])
     } catch (e) {
       setChatGecmisi(prev => [...prev, { rol: 'ai', metin: 'Bir hata oluştu: ' + e.message }])

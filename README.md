@@ -17,12 +17,14 @@ cd KPSS-Uygulamasi
 npm install
 ```
 
-### 3. Gemini API Key Ekle (AI Koç için)
+### 3. API Key'leri Ekle
 
-1. [Google AI Studio](https://aistudio.google.com/app/apikey)'dan ücretsiz API key al
-2. Proje kök klasöründe `.env` dosyası oluştur:
+1. [Groq Console](https://console.groq.com/keys)'dan ücretsiz API key al (AI Koç için)
+2. [Google AI Studio](https://aistudio.google.com/app/apikey)'dan ücretsiz API key al (Konu Takip önerileri için)
+3. Proje kök klasöründe `.env` dosyası oluştur:
 
 ```
+VITE_GROQ_API_KEY=buraya_api_keyini_yaz
 VITE_GEMINI_API_KEY=buraya_api_keyini_yaz
 ```
 
@@ -64,7 +66,7 @@ npm run deploy
 | 🃏 Flashcard | Aralıklı tekrar kartları (3/7 gün algoritması) |
 | 📊 Denemeler | Net girişi + Recharts grafik |
 | 🔥 Hata Havuzu | Yanlışları erit + kritik alarm |
-| ✨ AI Koç | Gemini ile haftalık analiz + sohbet |
+| ✨ AI Koç | Groq ile haftalık analiz + sohbet |
 
 ## Teknoloji
 
@@ -72,5 +74,6 @@ npm run deploy
 - **Tailwind CSS** — Stil
 - **Supabase** — Veritabanı + Auth
 - **Recharts** — Grafikler
-- **Gemini API** — Yapay Zeka
+- **Groq API** — Yapay Zeka (AI Koç)
+- **Gemini API** — Yapay Zeka (Konu Takip önerileri)
 - **Lucide React** — İkonlar
