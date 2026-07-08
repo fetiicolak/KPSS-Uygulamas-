@@ -1,0 +1,27 @@
+{
+  "name": "KPSS Asistanım",
+  "short_name": "KPSS",
+  "description": "KPSS Lisans Sınavı Kişisel Asistan",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f5f5f0",
+  "theme_color": "#81c784",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
