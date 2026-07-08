@@ -2,25 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import { Sparkles, RefreshCw, Calendar, TrendingUp, Brain, ChevronDown, ChevronUp } from 'lucide-react'
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || ''
-
+// AI istekleri Supabase Edge Function üzerinden gider — API key tarayıcıya inmez
 async function groqAnalyze(prompt) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1200,
-      temperature: 0.7,
-    }),
+  const { data, error } = await supabase.functions.invoke('ai-proxy', {
+    body: { provider: 'groq', prompt },
   })
-  const data = await res.json()
-  if (data.error) throw new Error(data.error.message)
-  return data.choices?.[0]?.message?.content || 'Yanıt alınamadı.'
+  if (error) throw new Error(error.message || 'AI servisine ulaşılamadı')
+  if (data?.error) throw new Error(data.error)
+  return data?.text || 'Yanıt alınamadı.'
 }
 
 export default function YapayZekaKocu({ user }) {
@@ -88,10 +77,6 @@ export default function YapayZekaKocu({ user }) {
   }, [fetchRaporlar, fetchIstatistik])
 
   async function raporOlustur() {
-    if (!GROQ_API_KEY) {
-      setHata('VITE_GROQ_API_KEY ortam değişkeni ayarlanmamış. .env dosyasına ekle.')
-      return
-    }
     if (!istatistik) return
     setLoading(true)
     setHata('')
@@ -132,7 +117,7 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
   }
 
   async function chatGonder() {
-    if (!chatMesaj.trim() || !GROQ_API_KEY) return
+    if (!chatMesaj.trim()) return
     setChatLoading(true)
     const kullanicimesaj = chatMesaj.trim()
     setChatMesaj('')
@@ -166,17 +151,6 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
         </h2>
       </div>
 
-      {/* API Key Uyarısı */}
-      {!GROQ_API_KEY && (
-        <div className="card bg-amber-50 border border-amber-100">
-          <p className="text-xs text-amber-700">
-            <strong>Yapay Zeka servisi yapılandırılmamış!</strong><br />
-            Proje kök klasöründe <code className="bg-amber-100 px-1 rounded">.env</code> dosyası oluştur:<br />
-            <code className="bg-amber-100 px-1 rounded text-[10px]">VITE_GROQ_API_KEY=YOUR_KEY_HERE</code>
-          </p>
-        </div>
-      )}
-
       {/* Bu Haftanın Özeti */}
       {istatistik && (
         <div className="card">
@@ -206,7 +180,7 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
       {/* Rapor Oluştur */}
       <button
         onClick={raporOlustur}
-        disabled={loading || !GROQ_API_KEY}
+        disabled={loading}
         className="w-full py-3 bg-gradient-to-r from-lavender-300 to-lavender-400 text-white rounded-2xl font-medium text-sm flex items-center justify-center gap-2 shadow-card active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
@@ -299,11 +273,11 @@ Sınav tarihi: 6 Eylül 2026. Samimi ve pozitif bir dil kullan, abartmadan motiv
                 value={chatMesaj}
                 onChange={e => setChatMesaj(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && chatGonder()}
-                disabled={!GROQ_API_KEY || chatLoading}
+                disabled={chatLoading}
               />
               <button
                 onClick={chatGonder}
-                disabled={!chatMesaj.trim() || !GROQ_API_KEY || chatLoading}
+                disabled={!chatMesaj.trim() || chatLoading}
                 className="btn-primary px-3 py-2"
               >
                 <Sparkles className="w-4 h-4" />

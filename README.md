@@ -17,16 +17,21 @@ cd KPSS-Uygulamasi
 npm install
 ```
 
-### 3. API Key'leri Ekle
+### 3. Yapay Zeka Kurulumu (Supabase Edge Function)
 
-1. [Groq Console](https://console.groq.com/keys)'dan ücretsiz API key al (AI Koç için)
-2. [Google AI Studio](https://aistudio.google.com/app/apikey)'dan ücretsiz API key al (Konu Takip önerileri için)
-3. Proje kök klasöründe `.env` dosyası oluştur:
+AI key'leri güvenlik için tarayıcıya inmez; Supabase'de sunucu tarafında tutulur.
+`supabase/functions/ai-proxy` fonksiyonunu yükle ve key'leri secret olarak ekle:
 
+```bash
+# Supabase access token al: https://supabase.com/dashboard/account/tokens
+set SUPABASE_ACCESS_TOKEN=sbp_...
+
+npx supabase functions deploy ai-proxy --project-ref PROJE_REF
+npx supabase secrets set GROQ_API_KEY=... GEMINI_API_KEY=... --project-ref PROJE_REF
 ```
-VITE_GROQ_API_KEY=buraya_api_keyini_yaz
-VITE_GEMINI_API_KEY=buraya_api_keyini_yaz
-```
+
+- Groq key (AI Koç): [Groq Console](https://console.groq.com/keys)
+- Gemini key (Konu Takip önerileri): [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ### 4. Geliştirme Sunucusunu Başlat
 
@@ -74,6 +79,6 @@ npm run deploy
 - **Tailwind CSS** — Stil
 - **Supabase** — Veritabanı + Auth
 - **Recharts** — Grafikler
-- **Groq API** — Yapay Zeka (AI Koç)
-- **Gemini API** — Yapay Zeka (Konu Takip önerileri)
+- **Groq API** — Yapay Zeka (AI Koç, Supabase Edge Function üzerinden)
+- **Gemini API** — Yapay Zeka (Konu Takip önerileri, Supabase Edge Function üzerinden)
 - **Lucide React** — İkonlar

@@ -10,8 +10,6 @@ import {
   CheckCircle, XCircle, AlertCircle, Target
 } from 'lucide-react'
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-
 const DERSLER = [
   { id: 'Tarih',       emoji: '🏛️', renk: '#f59e0b', acik: '#fef3c7' },
   { id: 'Coğrafya',    emoji: '🗺️', renk: '#3b82f6', acik: '#dbeafe' },
@@ -20,25 +18,16 @@ const DERSLER = [
   { id: 'Matematik',   emoji: '📐', renk: '#10b981', acik: '#d1fae5' },
 ]
 
+// AI istekleri Supabase Edge Function üzerinden gider — API key tarayıcıya inmez
 async function geminiOner(prompt) {
-  if (!GEMINI_API_KEY) return null
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.6, maxOutputTokens: 800, thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    }
-  )
-  const data = await res.json()
-  if (data.error) {
-    console.error('Gemini API hatası:', data.error)
+  const { data, error } = await supabase.functions.invoke('ai-proxy', {
+    body: { provider: 'gemini', prompt },
+  })
+  if (error) {
+    console.error('AI proxy hatası:', error)
     return null
   }
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || null
+  return data?.text || null
 }
 
 function NetHesapla(d, y) {
@@ -67,6 +56,8 @@ export default function KonuTakip({ user }) {
   const [form, setForm] = useState({ toplam: '', dogru: '', yanlis: '', bos: '', tarih: new Date().toISOString().split('T')[0] })
   const [aiOnerileri, setAiOnerileri] = useState({}) // { 'Ders-Konu': 'metin' }
   const [aiYukleniyor, setAiYukleniyor] = useState({})
+  const [testOnerileri, setTestOnerileri] = useState({}) // { kayitId: 'metin' }
+  const [testYukleniyor, setTestYukleniyor] = useState({})
   const [loading, setLoading] = useState(false)
   // Test girilmemiş konular: DB'de kayıt olmadığı için localStorage'da bekletilir,
   // ilk test kaydıyla birlikte DB'den gelmeye başlar ve listeden düşer
@@ -167,9 +158,10 @@ export default function KonuTakip({ user }) {
     await fetchKayitlar()
   }
 
-  async function aiOnerisiGetir(ders, konu) {
+  async function aiOnerisiGetir(ders, konu, force = false) {
     const key = `${ders}-${konu}`
-    if (aiOnerileri[key] || aiYukleniyor[key]) return
+    if (aiYukleniyor[key]) return
+    if (!force && aiOnerileri[key]) return
     setAiYukleniyor(prev => ({ ...prev, [key]: true }))
 
     const list = konuKayitlari(ders, konu)
@@ -189,6 +181,26 @@ Türkçe, kısa ve net yaz. Emoji kullanabilirsin.`
     const oneri = await geminiOner(prompt)
     setAiOnerileri(prev => ({ ...prev, [key]: oneri || 'Öneri alınamadı.' }))
     setAiYukleniyor(prev => ({ ...prev, [key]: false }))
+  }
+
+  // Tek bir test kaydı için AI önerisi (tekrar tıklanınca yeniden üretir)
+  async function testOnerisiGetir(ders, konu, kayit) {
+    const key = kayit.id
+    if (testYukleniyor[key]) return
+    setTestYukleniyor(prev => ({ ...prev, [key]: true }))
+
+    const prompt = `Sen bir KPSS hazırlık koçusun. Öğrencinin "${ders} - ${konu}" konusunda ${kayit.tarih} tarihli tek bir test sonucu:
+${kayit.soru_sayisi} soru, ${kayit.dogru} doğru, ${kayit.yanlis} yanlış, ${kayit.bos} boş, net=${kayit.net}
+
+Bu tek teste bakarak:
+1. Tek cümleyle bu test performansını değerlendir
+2. Bu sonuca göre somut 2 kısa öneri ver
+
+Türkçe, kısa ve net yaz. Emoji kullanabilirsin.`
+
+    const oneri = await geminiOner(prompt)
+    setTestOnerileri(prev => ({ ...prev, [key]: oneri || 'Öneri alınamadı.' }))
+    setTestYukleniyor(prev => ({ ...prev, [key]: false }))
   }
 
   async function yeniKonuEkle(dersId) {
@@ -405,25 +417,42 @@ Türkçe, kısa ve net yaz. Emoji kullanabilirsin.`
                                   const onceki = arr[i - 1]
                                   const trend = onceki ? k.net - onceki.net : null
                                   return (
-                                    <div key={k.id} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
-                                      <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">{k.tarih}</span>
-                                      <div className="flex gap-1.5 flex-1">
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-sage-100 text-sage-600 rounded-lg">{k.dogru}D</span>
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-400 rounded-lg">{k.yanlis}Y</span>
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-lg">{k.bos}B</span>
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-lavender-100 text-lavender-400 rounded-lg font-medium">/{k.soru_sayisi}</span>
-                                      </div>
-                                      <span className="text-xs font-bold" style={{ color: ders.renk }}>
-                                        {k.net}
-                                      </span>
-                                      {trend !== null && (
-                                        <span className={`text-[10px] ${trend > 0 ? 'text-sage-500' : trend < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                                          {trend > 0 ? `▲${trend.toFixed(1)}` : trend < 0 ? `▼${Math.abs(trend).toFixed(1)}` : '—'}
+                                    <div key={k.id}>
+                                      <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+                                        <span className="text-[10px] text-gray-400 w-14 flex-shrink-0">{k.tarih}</span>
+                                        <div className="flex gap-1.5 flex-1">
+                                          <span className="text-[10px] px-1.5 py-0.5 bg-sage-100 text-sage-600 rounded-lg">{k.dogru}D</span>
+                                          <span className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-400 rounded-lg">{k.yanlis}Y</span>
+                                          <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded-lg">{k.bos}B</span>
+                                          <span className="text-[10px] px-1.5 py-0.5 bg-lavender-100 text-lavender-400 rounded-lg font-medium">/{k.soru_sayisi}</span>
+                                        </div>
+                                        <span className="text-xs font-bold" style={{ color: ders.renk }}>
+                                          {k.net}
                                         </span>
+                                        {trend !== null && (
+                                          <span className={`text-[10px] ${trend > 0 ? 'text-sage-500' : trend < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                                            {trend > 0 ? `▲${trend.toFixed(1)}` : trend < 0 ? `▼${Math.abs(trend).toFixed(1)}` : '—'}
+                                          </span>
+                                        )}
+                                        <button
+                                          onClick={() => testOnerisiGetir(ders.id, konu, k)}
+                                          disabled={testYukleniyor[k.id]}
+                                          title="Bu test için AI önerisi al"
+                                          className="p-0.5 transition-colors"
+                                        >
+                                          <Sparkles className={`w-3 h-3 ${testYukleniyor[k.id] ? 'text-lavender-400 animate-pulse' : 'text-lavender-200 hover:text-lavender-400'}`} />
+                                        </button>
+                                        <button onClick={() => kayitSil(k.id)} className="p-0.5 hover:text-red-400 text-gray-200 transition-colors">
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                      {(testOnerileri[k.id] || testYukleniyor[k.id]) && (
+                                        <div className="mt-1 mb-1 bg-lavender-50 border border-lavender-100 rounded-xl px-3 py-2">
+                                          <p className="text-[11px] text-lavender-400 leading-relaxed">
+                                            {testYukleniyor[k.id] ? 'Analiz ediliyor...' : testOnerileri[k.id]}
+                                          </p>
+                                        </div>
                                       )}
-                                      <button onClick={() => kayitSil(k.id)} className="p-0.5 hover:text-red-400 text-gray-200 transition-colors">
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
                                     </div>
                                   )
                                 })}
@@ -483,14 +512,14 @@ Türkçe, kısa ve net yaz. Emoji kullanabilirsin.`
                           )}
 
                           {/* AI Öneri */}
-                          {oz2 && GEMINI_API_KEY && (
+                          {oz2 && (
                             <div className="bg-lavender-50 border border-lavender-100 rounded-xl p-3">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-medium text-lavender-400 flex items-center gap-1">
                                   <Sparkles className="w-3 h-3" /> AI Koç Görüşü
                                 </span>
                                 <button
-                                  onClick={() => aiOnerisiGetir(ders.id, konu)}
+                                  onClick={() => aiOnerisiGetir(ders.id, konu, true)}
                                   disabled={aiYukleniyor[aiKey]}
                                   className="p-1 hover:bg-lavender-100 rounded-lg transition-colors"
                                 >

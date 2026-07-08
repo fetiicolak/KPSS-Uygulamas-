@@ -14,9 +14,13 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS cikmis_sorular (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   soru_metni TEXT NOT NULL,
-  secenekler JSONB NOT NULL, -- {"A":"...","B":"...","C":"...","D":"...","E":"..."}
+  a_secenegi TEXT NOT NULL,
+  b_secenegi TEXT NOT NULL,
+  c_secenegi TEXT NOT NULL,
+  d_secenegi TEXT NOT NULL,
+  e_secenegi TEXT NOT NULL,
   dogru_cevap CHAR(1) NOT NULL,
-  konu TEXT NOT NULL, -- GY veya GK
+  ders TEXT NOT NULL, -- Türkçe, Tarih, Coğrafya, Vatandaşlık, Genel Kültür...
   yil INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -169,54 +173,29 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 -- ============================================================
 -- Örnek Çıkmış Sorular (Test verisi)
 -- ============================================================
-INSERT INTO cikmis_sorular (soru_metni, secenekler, dogru_cevap, konu, yil) VALUES
+INSERT INTO cikmis_sorular (soru_metni, a_secenegi, b_secenegi, c_secenegi, d_secenegi, e_secenegi, dogru_cevap, ders, yil) VALUES
 (
   'Türkiye Büyük Millet Meclisi kaç milletvekilinden oluşur?',
-  '{"A":"450","B":"500","C":"550","D":"600","E":"650"}',
-  'D', 'GK', 2022
+  '450', '500', '550', '600', '650',
+  'D', 'Vatandaşlık', 2022
 ),
 (
   'Aşağıdakilerden hangisi yürütme organının unsurundan biri değildir?',
-  '{"A":"Cumhurbaşkanı","B":"Bakanlar Kurulu","C":"Yargıtay","D":"Cumhurbaşkanı Yardımcısı","E":"Bakanlar"}',
-  'C', 'GK', 2021
+  'Cumhurbaşkanı', 'Bakanlar Kurulu', 'Yargıtay', 'Cumhurbaşkanı Yardımcısı', 'Bakanlar',
+  'C', 'Vatandaşlık', 2021
 ),
 (
   'Türkiye''nin en uzun nehri aşağıdakilerden hangisidir?',
-  '{"A":"Sakarya","B":"Kızılırmak","C":"Fırat","D":"Dicle","E":"Yeşilırmak"}',
-  'B', 'GY', 2020
+  'Sakarya', 'Kızılırmak', 'Fırat', 'Dicle', 'Yeşilırmak',
+  'B', 'Coğrafya', 2020
 ),
 (
   'Aşağıdaki cümlelerin hangisinde yazım yanlışı vardır?',
-  '{"A":"Yarın okula gideceğim","B":"Bu hafta sonu pikniğe gidiyoruz","C":"Herşeyi hallettim","D":"Sizi çok özledim","E":"Bugün hava çok güzel"}',
-  'C', 'GY', 2023
-),
-(
-  '2^10 işleminin sonucu kaçtır?',
-  '{"A":"512","B":"1024","C":"2048","D":"256","E":"4096"}',
-  'B', 'GY', 2022
-),
-(
-  'Türkiye Cumhuriyeti Anayasası kaçıncı yılında kabul edilmiştir?',
-  '{"A":"1961","B":"1971","C":"1980","D":"1982","E":"1987"}',
-  'D', 'GK', 2021
-),
-(
-  'İstanbul''un fethinin tarihi aşağıdakilerden hangisidir?',
-  '{"A":"1453","B":"1461","C":"1521","D":"1396","E":"1402"}',
-  'A', 'GY', 2020
+  'Yarın okula gideceğim', 'Bu hafta sonu pikniğe gidiyoruz', 'Herşeyi hallettim', 'Sizi çok özledim', 'Bugün hava çok güzel',
+  'C', 'Türkçe', 2023
 ),
 (
   'Bir üçgenin iç açıları toplamı kaç derecedir?',
-  '{"A":"90","B":"180","C":"270","D":"360","E":"120"}',
-  'B', 'GY', 2019
-),
-(
-  'Türkiye hangi kıtada yer almaktadır?',
-  '{"A":"Yalnızca Asya","B":"Yalnızca Avrupa","C":"Hem Asya hem Avrupa","D":"Afrika","E":"Okyanusya"}',
-  'C', 'GY', 2023
-),
-(
-  'Atatürk ilkeleri arasında aşağıdakilerden hangisi yer almaz?',
-  '{"A":"Cumhuriyetçilik","B":"Milliyetçilik","C":"Sosyalizm","D":"Laiklik","E":"İnkılapçılık"}',
-  'C', 'GK', 2022
+  '90', '180', '270', '360', '120',
+  'B', 'Matematik', 2019
 );

@@ -3,6 +3,17 @@ import { supabase } from '../supabaseClient'
 import { Timer, Lock, CheckCircle, XCircle, AlertCircle, Sparkles } from 'lucide-react'
 
 const SINAV_TARIHI = new Date('2026-09-06T10:00:00')
+const GUNLUK_SORU_ADEDI = 6 // her gün sabit; çözülmeyen gün birikmez, sorular tekrar sorulmaz
+
+// Öncüllü sorularda (I. ..., II. ..., III. ...) maddeleri alt alta göster.
+// En az 2 romen rakamı işareti varsa öncül listesi kabul edilir; tek geçen
+// "II. Mahmut" gibi ifadeler dokunulmadan kalır.
+function soruFormatla(metin) {
+  const marker = /(^|[\s;,])((?:I{1,3}|IV|V|VI{1,3})\.)\s/g
+  const eslesme = [...metin.matchAll(marker)]
+  if (eslesme.length < 2) return metin
+  return metin.replace(marker, '\n$2 ').trim()
+}
 
 function useCountdown() {
   const [timeLeft, setTimeLeft] = useState({})
@@ -32,6 +43,7 @@ export default function Dashboard({ user, onUnlocked }) {
   const [sonuclar, setSonuclar]             = useState({})
   const [loading, setLoading]               = useState(true)
   const [gununTamamlandi, setGununTamamlandi] = useState(false)
+  const [havuzBitti, setHavuzBitti]         = useState(false)
 
   const bugun = new Date().toISOString().split('T')[0]
 
@@ -86,14 +98,17 @@ export default function Dashboard({ user, onUnlocked }) {
     // Görülmemiş soruları filtrele
     let gorulememisSorular = tumSorular.filter(s => !gorulmusIds.has(s.id))
 
-    // Hiç görülmemiş soru kalmadıysa → sıfırla (tüm soruları tekrar kullan)
+    // Havuz bitti: sorular tekrar sorulmaz, gün kilidi açılır
     if (gorulememisSorular.length === 0) {
-      gorulememisSorular = tumSorular
+      setHavuzBitti(true)
+      setGununTamamlandi(true)
+      onUnlocked(true)
+      setLoading(false)
+      return
     }
 
-    // Günlük 6 soru seç
     const karistir = [...gorulememisSorular].sort(() => Math.random() - 0.5)
-    const secilen  = karistir.slice(0, Math.min(6, karistir.length))
+    const secilen  = karistir.slice(0, Math.min(GUNLUK_SORU_ADEDI, karistir.length))
 
     await supabase.from('gunluk_sorular').insert(
       secilen.map(s => ({ user_id: user.id, soru_id: s.id, tarih: bugun }))
@@ -191,6 +206,12 @@ export default function Dashboard({ user, onUnlocked }) {
           <div className="card flex items-center justify-center py-8">
             <div className="w-6 h-6 border-2 border-sage-300 border-t-sage-500 rounded-full animate-spin" />
           </div>
+        ) : havuzBitti ? (
+          <div className="card text-center py-6 bg-sage-50 border border-sage-100">
+            <Sparkles className="w-8 h-8 text-sage-500 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-sage-700">Soru havuzundaki tüm soruları çözdün! 🎉</p>
+            <p className="text-xs text-sage-600 mt-1">Modüller açık — deneme ve hata havuzuyla devam et.</p>
+          </div>
         ) : sorular.length === 0 ? (
           <div className="card text-center py-6 text-gray-400 text-sm">
             Henüz çıkmış soru eklenmemiş. Supabase Table Editor'den
@@ -221,7 +242,7 @@ export default function Dashboard({ user, onUnlocked }) {
                         : <XCircle    className="w-4 h-4 text-red-400  flex-shrink-0" />
                     )}
                   </div>
-                  <p className="text-sm text-gray-800 mb-3 leading-relaxed">{soru.soru_metni}</p>
+                  <p className="text-sm text-gray-800 mb-3 leading-relaxed whitespace-pre-line">{soruFormatla(soru.soru_metni)}</p>
                   <div className="space-y-1.5">
                     {Object.entries(secenekler).map(([harf, metin]) => {
                       let cls = 'w-full text-left text-sm px-3 py-2 rounded-xl border transition-all duration-200 '
@@ -252,7 +273,7 @@ export default function Dashboard({ user, onUnlocked }) {
           </div>
         )}
 
-        {gununTamamlandi && (
+        {gununTamamlandi && !havuzBitti && (
           <div className="card mt-3 bg-sage-50 border border-sage-100">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-sage-500 rounded-xl flex items-center justify-center flex-shrink-0">

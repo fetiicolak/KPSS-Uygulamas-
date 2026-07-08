@@ -26,9 +26,9 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+          # AI key'leri (Groq/Gemini) artık build'e girmiyor — Supabase Edge Function
+          # (ai-proxy) üzerinden sunucu tarafında kullanılıyor
           VITE_YOUTUBE_API_KEY: ${{ secrets.VITE_YOUTUBE_API_KEY }}
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
